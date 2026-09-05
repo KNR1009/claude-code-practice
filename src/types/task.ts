@@ -6,13 +6,26 @@ export type Task = {
   title: string;
   description: string;
   status: TaskStatus;
+  /** 締切日。"YYYY-MM-DD" 形式。未設定なら null */
+  dueDate: string | null;
+  /** カテゴリの ID。未設定なら null */
+  categoryId: string | null;
+  /** アーカイブ済みのタスクはボードに表示せず、アーカイブ一覧に回す */
+  archived: boolean;
 };
 
 /** タスク新規作成時にユーザーが入力する値 */
 export type TaskDraft = {
   title: string;
   description: string;
+  dueDate?: string | null;
+  categoryId?: string | null;
 };
+
+/** 詳細画面から編集できる項目 */
+export type TaskEdit = Partial<
+  Pick<Task, "title" | "description" | "status" | "dueDate" | "categoryId">
+>;
 
 export type Column = {
   status: TaskStatus;

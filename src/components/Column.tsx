@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, type DragEvent } from "react";
+import { findCategory } from "@/lib/category";
 import { TASK_ID_MIME } from "@/lib/dnd";
+import type { Category } from "@/types/category";
 import type { Task, TaskStatus } from "@/types/task";
 import { TaskCard } from "./TaskCard";
 import styles from "./Column.module.css";
@@ -10,11 +12,22 @@ type Props = {
   status: TaskStatus;
   label: string;
   tasks: readonly Task[];
+  categories: readonly Category[];
+  today: string | null;
   onDropTask: (taskId: string, status: TaskStatus) => void;
+  onSelectTask: (taskId: string) => void;
 };
 
 /** 1 つの列。タスクの一覧表示とドロップの受け取りを担う */
-export function Column({ status, label, tasks, onDropTask }: Props) {
+export function Column({
+  status,
+  label,
+  tasks,
+  categories,
+  today,
+  onDropTask,
+  onSelectTask,
+}: Props) {
   const [isOver, setIsOver] = useState(false);
 
   const handleDragOver = (event: DragEvent<HTMLElement>) => {
@@ -48,7 +61,13 @@ export function Column({ status, label, tasks, onDropTask }: Props) {
       </header>
       <div className={styles.list}>
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard
+            key={task.id}
+            task={task}
+            category={findCategory(categories, task.categoryId)}
+            today={today}
+            onSelect={onSelectTask}
+          />
         ))}
         {tasks.length === 0 && <p className={styles.empty}>タスクなし</p>}
       </div>

@@ -7,11 +7,15 @@
   --chip: #eef0f4;
   --muted: #6b7280;
   --accent: #2563eb;
+  --danger: #dc2626;
+  --warning: #b45309;
+  --overlay: rgb(15 17 21 / 45%);
   --text: #111827;
 }
 
+/* 明示的な選択が無いときだけ OS の設定に従う */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1115;
     --surface: #171a21;
     --surface-accent: #1d2740;
@@ -20,8 +24,26 @@
     --chip: #262b35;
     --muted: #9ca3af;
     --accent: #3b82f6;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --overlay: rgb(0 0 0 / 60%);
     --text: #f3f4f6;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-accent: #1d2740;
+  --card: #1f232c;
+  --border: #2a2f3a;
+  --chip: #262b35;
+  --muted: #9ca3af;
+  --accent: #3b82f6;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --overlay: rgb(0 0 0 / 60%);
+  --text: #f3f4f6;
 }
 
 * {

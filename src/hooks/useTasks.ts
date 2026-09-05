@@ -1,13 +1,27 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { addTask, createTask, moveTask } from "@/lib/task";
-import type { Task, TaskDraft, TaskStatus } from "@/types/task";
+import {
+  addTask,
+  clearCategory,
+  createTask,
+  deleteTask,
+  moveTask,
+  setArchived,
+  updateTask,
+} from "@/lib/task";
+import type { Task, TaskDraft, TaskEdit, TaskStatus } from "@/types/task";
 
 export type UseTasks = {
   tasks: Task[];
   addTask: (draft: TaskDraft) => void;
   moveTask: (taskId: string, status: TaskStatus) => void;
+  updateTask: (taskId: string, edit: TaskEdit) => void;
+  deleteTask: (taskId: string) => void;
+  archiveTask: (taskId: string) => void;
+  unarchiveTask: (taskId: string) => void;
+  /** 削除されたカテゴリを全タスクから外す */
+  clearCategory: (categoryId: string) => void;
 };
 
 /** カンバン全体のタスク状態を保持するフック */
@@ -22,5 +36,34 @@ export function useTasks(initialTasks: readonly Task[] = []): UseTasks {
     setTasks((current) => moveTask(current, taskId, status));
   }, []);
 
-  return { tasks, addTask: add, moveTask: move };
+  const update = useCallback((taskId: string, edit: TaskEdit) => {
+    setTasks((current) => updateTask(current, taskId, edit));
+  }, []);
+
+  const remove = useCallback((taskId: string) => {
+    setTasks((current) => deleteTask(current, taskId));
+  }, []);
+
+  const archive = useCallback((taskId: string) => {
+    setTasks((current) => setArchived(current, taskId, true));
+  }, []);
+
+  const unarchive = useCallback((taskId: string) => {
+    setTasks((current) => setArchived(current, taskId, false));
+  }, []);
+
+  const clearCategoryFromTasks = useCallback((categoryId: string) => {
+    setTasks((current) => clearCategory(current, categoryId));
+  }, []);
+
+  return {
+    tasks,
+    addTask: add,
+    moveTask: move,
+    updateTask: update,
+    deleteTask: remove,
+    archiveTask: archive,
+    unarchiveTask: unarchive,
+    clearCategory: clearCategoryFromTasks,
+  };
 }
