@@ -1,0 +1,25 @@
+.card {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  cursor: grab;
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.description {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}

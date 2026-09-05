@@ -1,0 +1,37 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-accent: #eef4ff;
+  --card: #ffffff;
+  --border: #e2e5ea;
+  --chip: #eef0f4;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --text: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-accent: #1d2740;
+    --card: #1f232c;
+    --border: #2a2f3a;
+    --chip: #262b35;
+    --muted: #9ca3af;
+    --accent: #3b82f6;
+    --text: #f3f4f6;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP",
+    sans-serif;
+}
