@@ -1,4 +1,12 @@
-import type { Task, TaskDraft, TaskEdit, TaskStatus } from "@/types/task";
+import { dueState } from "@/lib/date";
+import { CATEGORY_ALL, CATEGORY_NONE } from "@/types/task";
+import type {
+  Task,
+  TaskDraft,
+  TaskEdit,
+  TaskFilter,
+  TaskStatus,
+} from "@/types/task";
 
 /** ID 生成関数。テストからは決定的な実装を差し込める */
 export type IdGenerator = () => string;
@@ -125,4 +133,106 @@ export function countTasksByCategory(
   categoryId: string,
 ): number {
   return tasks.filter((task) => task.categoryId === categoryId).length;
+}
+
+/**
+ * 差し込み位置を決める。beforeTaskId があればその直前、
+ * 無ければ同じ列の最後のタスクの次（その列が空なら配列の末尾）。
+ */
+function insertionIndex(
+  tasks: readonly Task[],
+  status: TaskStatus,
+  beforeTaskId: string | null,
+): number {
+  if (beforeTaskId) {
+    const index = tasks.findIndex((task) => task.id === beforeTaskId);
+    if (index >= 0) return index;
+  }
+  let last = -1;
+  tasks.forEach((task, index) => {
+    if (task.status === status) last = index;
+  });
+  return last === -1 ? tasks.length : last + 1;
+}
+
+/**
+ * タスクを status の列へ移し、beforeTaskId の直前に差し込んだ新しい配列を返す。
+ * beforeTaskId が null なら、その列の末尾へ置く。
+ *
+ * 列内の並び順は配列内の相対順序そのものなので、差し込み直すだけで並び替えになる。
+ */
+export function moveTaskTo(
+  tasks: readonly Task[],
+  taskId: string,
+  status: TaskStatus,
+  beforeTaskId: string | null,
+): Task[] {
+  const target = tasks.find((task) => task.id === taskId);
+  if (!target) return [...tasks];
+  // 自分自身の上に落としたときは位置を変えず、状態だけ合わせる
+  if (beforeTaskId === taskId) return moveTask(tasks, taskId, status);
+
+  const rest = tasks.filter((task) => task.id !== taskId);
+  const index = insertionIndex(rest, status, beforeTaskId);
+  return [...rest.slice(0, index), { ...target, status }, ...rest.slice(index)];
+}
+
+function matchesKeyword(task: Task, keyword: string): boolean {
+  const needle = keyword.trim().toLowerCase();
+  if (!needle) return true;
+  return (
+    task.title.toLowerCase().includes(needle) ||
+    task.description.toLowerCase().includes(needle)
+  );
+}
+
+function matchesCategory(task: Task, category: string): boolean {
+  if (category === CATEGORY_ALL) return true;
+  if (category === CATEGORY_NONE) return task.categoryId === null;
+  return task.categoryId === category;
+}
+
+function matchesDue(
+  task: Task,
+  due: TaskFilter["due"],
+  today: string | null,
+): boolean {
+  if (due === "all") return true;
+  if (due === "none") return task.dueDate === null;
+  // 今日が確定するまで（useToday がマウント後に返すまで）は締切条件を評価しない。
+  // ここで弾くと初回描画で一瞬カードが消える
+  if (!today) return true;
+  if (task.dueDate === null) return false;
+  return dueState(task.dueDate, today) === due;
+}
+
+/** 1 件のタスクが絞り込み条件に合うか */
+export function matchesFilter(
+  task: Task,
+  filter: TaskFilter,
+  today: string | null,
+): boolean {
+  return (
+    matchesKeyword(task, filter.keyword) &&
+    matchesCategory(task, filter.category) &&
+    matchesDue(task, filter.due, today)
+  );
+}
+
+/** 絞り込み条件に合うタスクだけを元の並び順で返す */
+export function filterTasks(
+  tasks: readonly Task[],
+  filter: TaskFilter,
+  today: string | null,
+): Task[] {
+  return tasks.filter((task) => matchesFilter(task, filter, today));
+}
+
+/** 何か 1 つでも絞り込みが効いているか。クリアボタンの表示判定に使う */
+export function isFilterActive(filter: TaskFilter): boolean {
+  return (
+    filter.keyword.trim().length > 0 ||
+    filter.category !== CATEGORY_ALL ||
+    filter.due !== "all"
+  );
 }

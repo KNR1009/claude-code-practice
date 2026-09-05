@@ -2,7 +2,7 @@
 
 import { useState, type DragEvent } from "react";
 import { findCategory } from "@/lib/category";
-import { TASK_ID_MIME } from "@/lib/dnd";
+import { resolveBeforeId, TASK_ID_MIME, type DropSide } from "@/lib/dnd";
 import type { Category } from "@/types/category";
 import type { Task, TaskStatus } from "@/types/task";
 import { TaskCard } from "./TaskCard";
@@ -14,7 +14,13 @@ type Props = {
   tasks: readonly Task[];
   categories: readonly Category[];
   today: string | null;
-  onDropTask: (taskId: string, status: TaskStatus) => void;
+  /** 絞り込み中なら空表示の文言を変える */
+  filtered?: boolean;
+  onDropTask: (
+    taskId: string,
+    status: TaskStatus,
+    beforeTaskId: string | null,
+  ) => void;
   onSelectTask: (taskId: string) => void;
 };
 
@@ -25,6 +31,7 @@ export function Column({
   tasks,
   categories,
   today,
+  filtered = false,
   onDropTask,
   onSelectTask,
 }: Props) {
@@ -37,13 +44,29 @@ export function Column({
     setIsOver(true);
   };
 
+  // 列の余白へのドロップは「この列の末尾へ」
   const handleDrop = (event: DragEvent<HTMLElement>) => {
     event.preventDefault();
     setIsOver(false);
     const taskId = event.dataTransfer.getData(TASK_ID_MIME);
     if (taskId) {
-      onDropTask(taskId, status);
+      onDropTask(taskId, status, null);
     }
+  };
+
+  // 差し込み先の解決は、表示中の並びを知っているこの列で行う
+  const handleDropOnCard = (
+    draggedTaskId: string,
+    targetTaskId: string,
+    side: DropSide,
+  ) => {
+    setIsOver(false);
+    const orderedIds = tasks.map((task) => task.id);
+    onDropTask(
+      draggedTaskId,
+      status,
+      resolveBeforeId(orderedIds, targetTaskId, side),
+    );
   };
 
   return (
@@ -67,9 +90,12 @@ export function Column({
             category={findCategory(categories, task.categoryId)}
             today={today}
             onSelect={onSelectTask}
+            onDropOnCard={handleDropOnCard}
           />
         ))}
-        {tasks.length === 0 && <p className={styles.empty}>タスクなし</p>}
+        {tasks.length === 0 && (
+          <p className={styles.empty}>{filtered ? "該当なし" : "タスクなし"}</p>
+        )}
       </div>
     </section>
   );

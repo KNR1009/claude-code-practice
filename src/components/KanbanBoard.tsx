@@ -2,15 +2,25 @@
 
 import { useState } from "react";
 import { useCategories } from "@/hooks/useCategories";
+import { useTaskFilter } from "@/hooks/useTaskFilter";
 import { useTasks } from "@/hooks/useTasks";
 import { useToday } from "@/hooks/useToday";
-import { archivedTasks, countTasksByCategory, findTask, tasksByStatus } from "@/lib/task";
+import {
+  activeTasks,
+  archivedTasks,
+  countTasksByCategory,
+  filterTasks,
+  findTask,
+  isFilterActive,
+  tasksByStatus,
+} from "@/lib/task";
 import type { Category } from "@/types/category";
 import { COLUMNS, type Task, type TaskEdit } from "@/types/task";
 import { ArchiveList } from "./ArchiveList";
 import { CategoryManager } from "./CategoryManager";
 import { Column } from "./Column";
 import { TaskDetailDialog } from "./TaskDetailDialog";
+import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskForm } from "./TaskForm";
 import { ThemeToggle } from "./ThemeToggle";
 import styles from "./KanbanBoard.module.css";
@@ -34,13 +44,17 @@ export function KanbanBoard({ initialTasks = [], initialCategories }: Props) {
   } = useTasks(initialTasks);
   const { categories, addCategory, deleteCategory } =
     useCategories(initialCategories);
+  const { filter, setKeyword, setCategory, setDue, reset } = useTaskFilter();
   const today = useToday();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
 
   const selectedTask = findTask(tasks, selectedTaskId);
+  // アーカイブ一覧とカテゴリの件数は絞り込みの影響を受けない
   const archived = archivedTasks(tasks);
+  const visibleTasks = filterTasks(tasks, filter, today);
+  const filtering = isFilterActive(filter);
   const closeDetail = () => setSelectedTaskId(null);
 
   const taskCounts = Object.fromEntries(
@@ -99,6 +113,16 @@ export function KanbanBoard({ initialTasks = [], initialCategories }: Props) {
         />
       )}
 
+      <TaskFilterBar
+        filter={filter}
+        categories={categories}
+        visibleCount={activeTasks(visibleTasks).length}
+        onKeywordChange={setKeyword}
+        onCategoryChange={setCategory}
+        onDueChange={setDue}
+        onReset={reset}
+      />
+
       <TaskForm categories={categories} onAdd={addTask} />
 
       <div className={styles.columns}>
@@ -107,9 +131,10 @@ export function KanbanBoard({ initialTasks = [], initialCategories }: Props) {
             key={column.status}
             status={column.status}
             label={column.label}
-            tasks={tasksByStatus(tasks, column.status)}
+            tasks={tasksByStatus(visibleTasks, column.status)}
             categories={categories}
             today={today}
+            filtered={filtering}
             onDropTask={moveTask}
             onSelectTask={setSelectedTaskId}
           />

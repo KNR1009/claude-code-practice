@@ -43,3 +43,28 @@
   gap: 6px;
   margin-top: 2px;
 }
+
+/* ドラッグ中の差し込み位置を示すバー。列の gap（8px）の中に描く */
+.dropBefore,
+.dropAfter {
+  position: relative;
+}
+
+.dropBefore::after,
+.dropAfter::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: -4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.dropBefore::after {
+  top: -5px;
+}
+
+.dropAfter::after {
+  bottom: -5px;
+}

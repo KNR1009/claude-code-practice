@@ -1,0 +1,65 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.field {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldNarrow {
+  display: flex;
+  flex: 0 1 150px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.labelText {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.count {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.clear {
+  margin-bottom: 1px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.clear:hover {
+  border-color: var(--accent);
+}

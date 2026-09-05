@@ -44,6 +44,44 @@ describe("useTasks", () => {
     expect(result.current.tasks[0].status).toBe("in-progress");
   });
 
+  it("moveTask に beforeTaskId を渡すとその直前へ入る", () => {
+    const tasks = [
+      makeTask({ id: "1" }),
+      makeTask({ id: "2" }),
+      makeTask({ id: "3" }),
+    ];
+    const { result } = renderHook(() => useTasks(tasks));
+
+    act(() => {
+      result.current.moveTask("3", "todo", "1");
+    });
+
+    expect(result.current.tasks.map((task) => task.id)).toEqual([
+      "3",
+      "1",
+      "2",
+    ]);
+  });
+
+  it("beforeTaskId を省略すると列の末尾へ移動する", () => {
+    const tasks = [
+      makeTask({ id: "1" }),
+      makeTask({ id: "2" }),
+      makeTask({ id: "3" }),
+    ];
+    const { result } = renderHook(() => useTasks(tasks));
+
+    act(() => {
+      result.current.moveTask("1", "todo");
+    });
+
+    expect(result.current.tasks.map((task) => task.id)).toEqual([
+      "2",
+      "3",
+      "1",
+    ]);
+  });
+
   it("updateTask で編集内容が反映される", () => {
     const { result } = renderHook(() => useTasks(initial));
 
