@@ -33,7 +33,8 @@ ESLint は未導入。型チェックとテストで担保している。
 
 - 未着手 / 進行中 / 完了 の3列のカンバンボード
 - タスクの追加（タイトル・説明・締切日・カテゴリ）
-- ドラッグ＆ドロップで列間を移動
+- ドラッグ＆ドロップで列間を移動。同じ列の中でも、カードの上半分 / 下半分どちらに落としたかで位置を指定して並び替えられる
+- 検索・絞り込み（キーワード / カテゴリ / 締切の状態）。絞り込み中は表示件数と「クリア」ボタンが出る
 - カードをクリックすると詳細モーダルが開き、全項目を編集・保存
 - タスクの削除（2段階の確認あり）
 - アーカイブ / アーカイブ一覧からの復帰・削除
@@ -65,16 +66,18 @@ ESLint は未導入。型チェックとテストで担保している。
 │   │   ├── category.ts           #   カテゴリの生成・追加・削除・検索・バリデーション
 │   │   ├── date.ts               #   締切日の比較と整形
 │   │   ├── theme.ts              #   テーマの解決ロジックと初期化スクリプト
-│   │   └── dnd.ts                #   ドラッグ＆ドロップで使う dataTransfer のキー
+│   │   └── dnd.ts                #   D&D の dataTransfer キーと、落とし位置の判定
 │   │
 │   ├── hooks/                    # React の状態。更新は lib の関数に委譲する
 │   │   ├── useTasks.ts           #   タスク一覧
 │   │   ├── useCategories.ts      #   カテゴリ一覧
+│   │   ├── useTaskFilter.ts      #   絞り込み条件
 │   │   ├── useTheme.ts           #   テーマ（localStorage / <html data-theme>）
 │   │   └── useToday.ts           #   今日の日付（マウント後に確定させる）
 │   │
 │   ├── components/               # 表示とユーザー操作。1ファイル1責務
 │   │   ├── KanbanBoard.tsx       #   全体の組み立て。状態と各パーツの結線役
+│   │   ├── TaskFilterBar.tsx     #   検索・絞り込みバー
 │   │   ├── TaskForm.tsx          #   タスク追加フォーム
 │   │   ├── Column.tsx            #   1列の表示とドロップの受け取り
 │   │   ├── TaskCard.tsx          #   1枚のカード。ドラッグ開始と詳細を開く操作
@@ -165,21 +168,37 @@ type Category = {
   label: string;
   color: string;               // COLOR_PALETTE のいずれか
 };
+
+type TaskFilter = {
+  keyword: string;             // タイトル・説明への部分一致。空文字なら絞らない
+  category: string;            // "all" / "none" / Category.id
+  due: "all" | "overdue" | "today" | "upcoming" | "none";
+};
 ```
 
 - タスクはカテゴリを **ID で参照**する。カテゴリを削除したら、参照していたタスクの `categoryId` を `null` に戻す（`lib/task.ts` の `clearCategory`）
 - 参照が外れた ID が残っていても `findCategory` が `null` を返すため、表示は「カテゴリなし」になり壊れない
 - アーカイブは `status` とは独立したフラグ。戻したときに元の列へ復帰する
+- **列内の並び順は `tasks` 配列の順序そのもの。** `Task` に `order` のようなフィールドは持たせない（→ [6章](#6-知っておくと迷わない実装メモ)）
+- `TaskFilter.category` の `"all"` / `"none"` は番兵。`Task.categoryId` の `null`（カテゴリ未設定）とは別物で、既定カテゴリの ID（`work` / `personal` / `urgent`）や `crypto.randomUUID()` とは衝突しない
 
 ---
 
 ## 6. 知っておくと迷わない実装メモ
 
-**ドラッグ＆ドロップはブラウザ標準の HTML5 DnD**（追加ライブラリなし）。`TaskCard` が `dataTransfer` に ID を載せ、`Column` が `drop` で受け取る。`dragOver` で `preventDefault()` を呼ばないとドロップが許可されない点に注意。
+**ドラッグ＆ドロップはブラウザ標準の HTML5 DnD**（追加ライブラリなし）。`TaskCard` が `dataTransfer` に ID を載せ、`Column` と `TaskCard` が `drop` で受け取る。`dragOver` で `preventDefault()` を呼ばないとドロップが許可されない点に注意。
+
+**列内の並び替えは、配列の中で要素を差し込み直すだけで済む。** 列の並び順は `tasksByStatus` が `tasks` を素通しでフィルタした結果、つまり配列内の相対順序そのものなので、`Task` に順序フィールドを足す必要がない。`lib/task.ts` の `moveTaskTo(tasks, taskId, status, beforeTaskId)` が「対象を抜いて、指定の位置へ差し込む」を担う。`beforeTaskId` が `null` のときは配列の末尾ではなく **その列の最後のタスクの次**に入れる（末尾に足すと他の列を飛び越えてしまう）。
+
+**カード側の `onDrop` では `stopPropagation()` が必須。** 呼ばないと親の `Column` の `onDrop` にも伝播し、「カードの直前に差し込む」直後に「列の末尾へ移動」で上書きされる。落とし位置の判定（上半分か下半分か）は `lib/dnd.ts` の `dropSide` / `resolveBeforeId` に純粋関数として切り出してある。
+
+**絞り込み中の並び替えは、表示中のカードだけを見て位置を決める。** そのため「表示されている最後のカードの下」に落とすと、隠れているタスクより前ではなく列の末尾に入る。実害が無いので許容している。
 
 **テーマは `<html data-theme>` で切り替える。** `globals.css` は「明示的な選択があればそれ、無ければ OS の設定」の順で効くように書いてある。`layout.tsx` に同期スクリプト（`lib/theme.ts` の `THEME_INIT_SCRIPT`）を1本入れて、初回描画前に属性を当てることでちらつきを防いでいる。
 
 **「今日」はレンダリング中に求めない。** このページは静的に事前生成されるため、`todayIso()` をそのまま呼ぶとビルド日で固定されてしまう。`useToday` がマウント後にクライアントで確定させ、それまでは締切バッジの色分けをしない。
+
+**絞り込みは `today` が確定するまで締切条件を評価しない。** `useToday` はマウント後に日付を返すため、初回描画では `null`。ここで弾くと一瞬カードが消えるので、`filterTasks` は `today` が `null` の間は締切の条件を無視して全件通す（「締切なし」だけは日付に依存しないので常に効く）。
 
 **カテゴリの色は `color-mix()` でカード色と混ぜている。** ライト / ダークで定義を分ける必要がなく、パレットの色を1つ足すだけで両テーマに対応する。
 
@@ -198,6 +217,7 @@ Vitest + Testing Library（jsdom）。`npm test` で全件実行。
 
 - ユーザー操作は `userEvent` で書く（`fireEvent` は DnD などの低レベルなイベントに限る）
 - jsdom には `DataTransfer` が無いので `src/test/dataTransfer.ts` のスタブを `fireEvent` の init に渡す
+- **jsdom の `getBoundingClientRect()` は常に 0 を返し、`drop` イベントは `clientY` を落とす。** そのため「カードの上半分 / 下半分」の判定はコンポーネントテストでは常に `after` に倒れる。判定そのものは `lib/dnd.test.ts` で数値を直接渡して確かめ、両方向を画面越しに試したい場合は `TaskCard.test.tsx` のように `Element.prototype.getBoundingClientRect` を差し替えたうえで、`createEvent.drop()` で作ったイベントに `clientY` を `defineProperty` で載せる
 - テストデータは `src/test/factories.ts` の `makeTask` / `makeCategory` を使い、必要な項目だけ上書きする
 
 ```ts
@@ -280,3 +300,4 @@ Vercel にホストしている。GitHub 連携済みで、**手動のデプロ�
 | 2026-09-05 | 詳細・編集・削除・アーカイブ・締切日・カテゴリ・ダークモードを追加 | 完了 |
 | 2026-09-05 | カテゴリをユーザー管理化（追加・削除、10色パレット） | 完了 |
 | 2026-09-05 | Vercel へデプロイ・GitHub 連携（main push で本番、PR でプレビュー） | 完了 |
+| 2026-09-05 | 検索・絞り込み（キーワード / カテゴリ / 締切）と列内の並び替えを追加 | 完了 |

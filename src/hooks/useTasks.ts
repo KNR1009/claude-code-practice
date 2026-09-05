@@ -6,7 +6,7 @@ import {
   clearCategory,
   createTask,
   deleteTask,
-  moveTask,
+  moveTaskTo,
   setArchived,
   updateTask,
 } from "@/lib/task";
@@ -15,7 +15,12 @@ import type { Task, TaskDraft, TaskEdit, TaskStatus } from "@/types/task";
 export type UseTasks = {
   tasks: Task[];
   addTask: (draft: TaskDraft) => void;
-  moveTask: (taskId: string, status: TaskStatus) => void;
+  /** beforeTaskId の直前へ差し込む。省略すると列の末尾へ移動する */
+  moveTask: (
+    taskId: string,
+    status: TaskStatus,
+    beforeTaskId?: string | null,
+  ) => void;
   updateTask: (taskId: string, edit: TaskEdit) => void;
   deleteTask: (taskId: string) => void;
   archiveTask: (taskId: string) => void;
@@ -32,9 +37,12 @@ export function useTasks(initialTasks: readonly Task[] = []): UseTasks {
     setTasks((current) => addTask(current, createTask(draft)));
   }, []);
 
-  const move = useCallback((taskId: string, status: TaskStatus) => {
-    setTasks((current) => moveTask(current, taskId, status));
-  }, []);
+  const move = useCallback(
+    (taskId: string, status: TaskStatus, beforeTaskId: string | null = null) => {
+      setTasks((current) => moveTaskTo(current, taskId, status, beforeTaskId));
+    },
+    [],
+  );
 
   const update = useCallback((taskId: string, edit: TaskEdit) => {
     setTasks((current) => updateTask(current, taskId, edit));

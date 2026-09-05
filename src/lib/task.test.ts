@@ -7,15 +7,25 @@ import {
   countTasksByCategory,
   createTask,
   deleteTask,
+  filterTasks,
   findTask,
+  isFilterActive,
   isValidDraft,
+  matchesFilter,
   moveTask,
+  moveTaskTo,
   setArchived,
   tasksByStatus,
   updateTask,
 } from "@/lib/task";
 import { makeTask } from "@/test/factories";
-import type { Task } from "@/types/task";
+import {
+  CATEGORY_ALL,
+  CATEGORY_NONE,
+  EMPTY_FILTER,
+  type Task,
+  type TaskFilter,
+} from "@/types/task";
 
 const task = (id: string, overrides: Partial<Task> = {}) =>
   makeTask({ id, title: `task ${id}`, description: "", ...overrides });
@@ -273,5 +283,216 @@ describe("findTask", () => {
   it("未選択や未知の ID なら null を返す", () => {
     expect(findTask(tasks, null)).toBeNull();
     expect(findTask(tasks, "unknown")).toBeNull();
+  });
+});
+
+describe("moveTaskTo", () => {
+  const ids = (tasks: readonly Task[]) => tasks.map((item) => item.id);
+
+  it("同じ列で上へ動かす", () => {
+    const tasks = [task("1"), task("2"), task("3")];
+
+    expect(ids(moveTaskTo(tasks, "3", "todo", "1"))).toEqual(["3", "1", "2"]);
+  });
+
+  it("同じ列で下へ動かす", () => {
+    const tasks = [task("1"), task("2"), task("3")];
+
+    expect(ids(moveTaskTo(tasks, "1", "todo", "3"))).toEqual(["2", "1", "3"]);
+  });
+
+  it("beforeTaskId が null なら、その列の末尾へ置く", () => {
+    const tasks = [
+      task("1"),
+      task("2", { status: "done" }),
+      task("3"),
+      task("4", { status: "done" }),
+    ];
+    const moved = moveTaskTo(tasks, "1", "todo", null);
+
+    // 最後の todo（"3"）の直後に入り、done の "4" は飛び越えない
+    expect(ids(moved)).toEqual(["2", "3", "1", "4"]);
+  });
+
+  it("別の列へ位置を指定して移す", () => {
+    const tasks = [
+      task("1"),
+      task("2", { status: "done" }),
+      task("3", { status: "done" }),
+    ];
+    const moved = moveTaskTo(tasks, "1", "done", "3");
+
+    expect(ids(moved)).toEqual(["2", "1", "3"]);
+    expect(moved[1].status).toBe("done");
+  });
+
+  it("空の列へ移すと配列の末尾に入る", () => {
+    const tasks = [task("1"), task("2")];
+    const moved = moveTaskTo(tasks, "1", "in-progress", null);
+
+    expect(ids(moved)).toEqual(["2", "1"]);
+    expect(moved[1].status).toBe("in-progress");
+  });
+
+  it("自分自身の上に落としても位置は変えず、状態だけ合わせる", () => {
+    const tasks = [task("1"), task("2"), task("3")];
+    const moved = moveTaskTo(tasks, "2", "done", "2");
+
+    expect(ids(moved)).toEqual(["1", "2", "3"]);
+    expect(moved[1].status).toBe("done");
+  });
+
+  it("知らない beforeTaskId は列の末尾として扱う", () => {
+    const tasks = [task("1"), task("2"), task("3")];
+
+    expect(ids(moveTaskTo(tasks, "1", "todo", "unknown"))).toEqual([
+      "2",
+      "3",
+      "1",
+    ]);
+  });
+
+  it("知らないタスク ID なら並びを変えない", () => {
+    const tasks = [task("1"), task("2")];
+
+    expect(ids(moveTaskTo(tasks, "unknown", "done", null))).toEqual(["1", "2"]);
+  });
+
+  it("元の配列を書き換えない", () => {
+    const tasks = [task("1"), task("2"), task("3")];
+    moveTaskTo(tasks, "3", "done", "1");
+
+    expect(ids(tasks)).toEqual(["1", "2", "3"]);
+    expect(tasks[2].status).toBe("todo");
+  });
+});
+
+describe("filterTasks", () => {
+  const today = "2026-09-05";
+  const filter = (overrides: Partial<TaskFilter> = {}): TaskFilter => ({
+    ...EMPTY_FILTER,
+    ...overrides,
+  });
+
+  const tasks = [
+    task("1", { title: "設計する", description: "画面構成", categoryId: "work" }),
+    task("2", { title: "Deploy", description: "本番へ", dueDate: "2026-09-01" }),
+    task("3", { title: "レビュー", description: "", dueDate: "2026-09-05" }),
+    task("4", { title: "調査", description: "", dueDate: "2026-09-30" }),
+  ];
+
+  const ids = (filtered: readonly Task[]) => filtered.map((item) => item.id);
+
+  it("条件が空なら全件返す", () => {
+    expect(ids(filterTasks(tasks, filter(), today))).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+    ]);
+  });
+
+  it("キーワードはタイトルと説明の両方に効く", () => {
+    expect(ids(filterTasks(tasks, filter({ keyword: "設計" }), today))).toEqual([
+      "1",
+    ]);
+    expect(ids(filterTasks(tasks, filter({ keyword: "画面" }), today))).toEqual([
+      "1",
+    ]);
+  });
+
+  it("キーワードは大文字小文字を区別せず、前後の空白を無視する", () => {
+    expect(
+      ids(filterTasks(tasks, filter({ keyword: "  deploy " }), today)),
+    ).toEqual(["2"]);
+  });
+
+  it("一致しないキーワードでは空になる", () => {
+    expect(filterTasks(tasks, filter({ keyword: "存在しない" }), today)).toEqual(
+      [],
+    );
+  });
+
+  it("カテゴリ ID で絞る", () => {
+    expect(ids(filterTasks(tasks, filter({ category: "work" }), today))).toEqual(
+      ["1"],
+    );
+  });
+
+  it("カテゴリなしで絞ると未設定のタスクだけになる", () => {
+    expect(
+      ids(filterTasks(tasks, filter({ category: CATEGORY_NONE }), today)),
+    ).toEqual(["2", "3", "4"]);
+  });
+
+  it("締切の状態で絞る", () => {
+    expect(ids(filterTasks(tasks, filter({ due: "overdue" }), today))).toEqual([
+      "2",
+    ]);
+    expect(ids(filterTasks(tasks, filter({ due: "today" }), today))).toEqual([
+      "3",
+    ]);
+    expect(ids(filterTasks(tasks, filter({ due: "upcoming" }), today))).toEqual([
+      "4",
+    ]);
+    expect(ids(filterTasks(tasks, filter({ due: "none" }), today))).toEqual([
+      "1",
+    ]);
+  });
+
+  it("today が未確定なら締切の条件を無視して全件通す", () => {
+    expect(ids(filterTasks(tasks, filter({ due: "overdue" }), null))).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+    ]);
+  });
+
+  it("today が未確定でも締切なしの絞り込みは効く", () => {
+    expect(ids(filterTasks(tasks, filter({ due: "none" }), null))).toEqual(["1"]);
+  });
+
+  it("複数の条件は AND で効く", () => {
+    const result = filterTasks(
+      tasks,
+      filter({ keyword: "レビュー", due: "today" }),
+      today,
+    );
+
+    expect(ids(result)).toEqual(["3"]);
+  });
+
+  it("元の配列を書き換えない", () => {
+    filterTasks(tasks, filter({ keyword: "設計" }), today);
+
+    expect(tasks).toHaveLength(4);
+  });
+
+  it("matchesFilter は 1 件の判定を返す", () => {
+    expect(matchesFilter(tasks[0], filter({ keyword: "設計" }), today)).toBe(
+      true,
+    );
+    expect(matchesFilter(tasks[1], filter({ keyword: "設計" }), today)).toBe(
+      false,
+    );
+  });
+});
+
+describe("isFilterActive", () => {
+  it("何も絞っていなければ false", () => {
+    expect(isFilterActive(EMPTY_FILTER)).toBe(false);
+    expect(isFilterActive({ ...EMPTY_FILTER, keyword: "   " })).toBe(false);
+  });
+
+  it("いずれかの条件が入っていれば true", () => {
+    expect(isFilterActive({ ...EMPTY_FILTER, keyword: "設計" })).toBe(true);
+    expect(isFilterActive({ ...EMPTY_FILTER, category: CATEGORY_NONE })).toBe(
+      true,
+    );
+    expect(isFilterActive({ ...EMPTY_FILTER, due: "today" })).toBe(true);
+    expect(isFilterActive({ ...EMPTY_FILTER, category: CATEGORY_ALL })).toBe(
+      false,
+    );
   });
 });

@@ -15,6 +15,23 @@ const dragCardTo = (card: HTMLElement, column: HTMLElement) => {
   fireEvent.drop(column, { dataTransfer });
 };
 
+/**
+ * カード → カード のドラッグ＆ドロップを再現する。
+ * jsdom では矩形も clientY も取れないため、落ちる側は常に "after"（＝直後）になる
+ */
+const dragCardOnto = (card: HTMLElement, target: HTMLElement) => {
+  const dataTransfer = createDataTransfer();
+  fireEvent.dragStart(card, { dataTransfer });
+  fireEvent.dragOver(target, { dataTransfer });
+  fireEvent.drop(target, { dataTransfer });
+};
+
+/** 列に並んでいるカードのタイトルを上から順に返す */
+const titlesIn = (column: HTMLElement) =>
+  within(column)
+    .getAllByRole("heading", { level: 3 })
+    .map((heading) => heading.textContent);
+
 const openDetail = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(screen.getByTestId("task-1"));
   return screen.getByRole("dialog");
@@ -231,5 +248,117 @@ describe("KanbanBoard", () => {
     expect(within(panel).queryByText("仕事")).not.toBeInTheDocument();
     expect(within(todo).queryByText("仕事")).not.toBeInTheDocument();
     expect(within(todo).getByText("設計する")).toBeInTheDocument();
+  });
+
+  it("同じ列の中でカードを並び替えられる", () => {
+    render(
+      <KanbanBoard
+        initialTasks={[
+          makeTask({ id: "1", title: "設計する" }),
+          makeTask({ id: "2", title: "実装する" }),
+          makeTask({ id: "3", title: "レビューする" }),
+        ]}
+      />,
+    );
+    const todo = screen.getByTestId("column-todo");
+    expect(titlesIn(todo)).toEqual(["設計する", "実装する", "レビューする"]);
+
+    // 3 枚目を 1 枚目の直後へ
+    dragCardOnto(screen.getByTestId("task-3"), screen.getByTestId("task-1"));
+
+    expect(titlesIn(todo)).toEqual(["設計する", "レビューする", "実装する"]);
+  });
+
+  it("別の列へは位置を指定して移せる", () => {
+    render(
+      <KanbanBoard
+        initialTasks={[
+          makeTask({ id: "1", title: "設計する" }),
+          makeTask({ id: "2", title: "実装する", status: "done" }),
+          makeTask({ id: "3", title: "レビューする", status: "done" }),
+        ]}
+      />,
+    );
+
+    // 未着手の "設計する" を、完了列の "実装する" の直後へ
+    dragCardOnto(screen.getByTestId("task-1"), screen.getByTestId("task-2"));
+
+    expect(titlesIn(screen.getByTestId("column-done"))).toEqual([
+      "実装する",
+      "設計する",
+      "レビューする",
+    ]);
+    expect(screen.getByTestId("column-todo")).toHaveTextContent("タスクなし");
+  });
+
+  it("キーワードで絞り込み、クリアで元に戻る", async () => {
+    const user = userEvent.setup();
+    render(
+      <KanbanBoard
+        initialTasks={[
+          makeTask({ id: "1", title: "設計する", description: "画面構成" }),
+          makeTask({ id: "2", title: "実装する", description: "" }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("2 件表示中")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("検索"), "設計");
+
+    expect(screen.getByText("設計する")).toBeInTheDocument();
+    expect(screen.queryByText("実装する")).not.toBeInTheDocument();
+    expect(screen.getByText("1 件表示中")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "クリア" }));
+
+    expect(screen.getByText("実装する")).toBeInTheDocument();
+    expect(screen.getByText("2 件表示中")).toBeInTheDocument();
+  });
+
+  it("絞り込みで空になった列には該当なしと出す", async () => {
+    const user = userEvent.setup();
+    render(
+      <KanbanBoard initialTasks={[makeTask({ id: "1", title: "設計する" })]} />,
+    );
+
+    await user.type(screen.getByLabelText("検索"), "存在しない");
+
+    expect(screen.getByTestId("column-todo")).toHaveTextContent("該当なし");
+    expect(screen.getByText("0 件表示中")).toBeInTheDocument();
+  });
+
+  it("カテゴリで絞り込める", async () => {
+    const user = userEvent.setup();
+    render(
+      <KanbanBoard
+        initialTasks={[
+          makeTask({ id: "1", title: "設計する", categoryId: "work" }),
+          makeTask({ id: "2", title: "実装する", categoryId: null }),
+        ]}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText("カテゴリで絞る"), "work");
+
+    expect(screen.getByText("設計する")).toBeInTheDocument();
+    expect(screen.queryByText("実装する")).not.toBeInTheDocument();
+  });
+
+  it("絞り込んでもアーカイブ一覧の件数は変わらない", async () => {
+    const user = userEvent.setup();
+    render(
+      <KanbanBoard
+        initialTasks={[
+          makeTask({ id: "1", title: "設計する" }),
+          makeTask({ id: "2", title: "実装する", archived: true }),
+        ]}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("検索"), "設計");
+
+    expect(
+      screen.getByRole("button", { name: "アーカイブ一覧（1）" }),
+    ).toBeInTheDocument();
   });
 });

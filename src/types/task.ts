@@ -38,3 +38,27 @@ export const COLUMNS: readonly Column[] = [
   { status: "in-progress", label: "進行中" },
   { status: "done", label: "完了" },
 ] as const;
+
+/** 締切による絞り込みの選択肢 */
+export type DueFilter = "all" | "overdue" | "today" | "upcoming" | "none";
+
+/** カテゴリで絞らないことを表す番兵。Category.id とは衝突しない */
+export const CATEGORY_ALL = "all";
+/** カテゴリ未設定のタスクだけに絞ることを表す番兵 */
+export const CATEGORY_NONE = "none";
+
+/** ボードの絞り込み条件 */
+export type TaskFilter = {
+  /** タイトル・説明への部分一致。空文字なら絞らない */
+  keyword: string;
+  /** CATEGORY_ALL / CATEGORY_NONE / Category.id のいずれか */
+  category: string;
+  due: DueFilter;
+};
+
+/** 何も絞っていない状態 */
+export const EMPTY_FILTER: TaskFilter = {
+  keyword: "",
+  category: CATEGORY_ALL,
+  due: "all",
+};
