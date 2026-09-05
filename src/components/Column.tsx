@@ -10,11 +10,20 @@ type Props = {
   status: TaskStatus;
   label: string;
   tasks: readonly Task[];
+  today: string | null;
   onDropTask: (taskId: string, status: TaskStatus) => void;
+  onSelectTask: (taskId: string) => void;
 };
 
 /** 1 つの列。タスクの一覧表示とドロップの受け取りを担う */
-export function Column({ status, label, tasks, onDropTask }: Props) {
+export function Column({
+  status,
+  label,
+  tasks,
+  today,
+  onDropTask,
+  onSelectTask,
+}: Props) {
   const [isOver, setIsOver] = useState(false);
 
   const handleDragOver = (event: DragEvent<HTMLElement>) => {
@@ -48,7 +57,12 @@ export function Column({ status, label, tasks, onDropTask }: Props) {
       </header>
       <div className={styles.list}>
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard
+            key={task.id}
+            task={task}
+            today={today}
+            onSelect={onSelectTask}
+          />
         ))}
         {tasks.length === 0 && <p className={styles.empty}>タスクなし</p>}
       </div>

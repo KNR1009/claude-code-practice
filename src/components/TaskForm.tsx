@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { isValidDraft } from "@/lib/task";
-import type { TaskDraft } from "@/types/task";
+import type { CategoryId, TaskDraft } from "@/types/task";
+import { CategorySelect } from "./CategorySelect";
 import styles from "./TaskForm.module.css";
 
 type Props = {
@@ -13,14 +14,17 @@ type Props = {
 export function TaskForm({ onAdd }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [categoryId, setCategoryId] = useState<CategoryId>("none");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const draft = { title, description };
-    if (!isValidDraft(draft)) return;
-    onAdd(draft);
+    if (!isValidDraft({ title, description })) return;
+    onAdd({ title, description, dueDate: dueDate || null, categoryId });
     setTitle("");
     setDescription("");
+    setDueDate("");
+    setCategoryId("none");
   };
 
   return (
@@ -42,6 +46,23 @@ export function TaskForm({ onAdd }: Props) {
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder="補足（任意）"
+          />
+        </label>
+        <label className={styles.fieldNarrow}>
+          <span className={styles.labelText}>締切日</span>
+          <input
+            className={styles.input}
+            type="date"
+            value={dueDate}
+            onChange={(event) => setDueDate(event.target.value)}
+          />
+        </label>
+        <label className={styles.fieldNarrow}>
+          <span className={styles.labelText}>カテゴリ</span>
+          <CategorySelect
+            className={styles.input}
+            value={categoryId}
+            onChange={setCategoryId}
           />
         </label>
       </div>
