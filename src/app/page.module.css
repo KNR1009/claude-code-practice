@@ -1,0 +1,16 @@
+.main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 40px 20px 64px;
+}
+
+.heading {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+}
+
+.lead {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
