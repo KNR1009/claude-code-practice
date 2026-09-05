@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { TaskDetailDialog } from "@/components/TaskDetailDialog";
-import { makeTask } from "@/test/factories";
+import { makeCategory, makeTask } from "@/test/factories";
 import type { Task } from "@/types/task";
 
 const renderDialog = (task: Task = makeTask()) => {
@@ -13,7 +13,13 @@ const renderDialog = (task: Task = makeTask()) => {
     onUnarchive: vi.fn(),
     onClose: vi.fn(),
   };
-  render(<TaskDetailDialog task={task} {...handlers} />);
+  render(
+    <TaskDetailDialog
+      task={task}
+      categories={[makeCategory(), makeCategory({ id: "urgent", label: "緊急", color: "#dc2626" })]}
+      {...handlers}
+    />,
+  );
   return handlers;
 };
 

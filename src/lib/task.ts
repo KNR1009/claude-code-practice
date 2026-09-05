@@ -24,7 +24,7 @@ export function createTask(
     description: draft.description.trim(),
     status: "todo",
     dueDate: draft.dueDate?.trim() ? draft.dueDate : null,
-    categoryId: draft.categoryId ?? "none",
+    categoryId: draft.categoryId ?? null,
     archived: false,
   };
 }
@@ -107,4 +107,22 @@ export function tasksByStatus(
 export function findTask(tasks: readonly Task[], taskId: string | null): Task | null {
   if (!taskId) return null;
   return tasks.find((task) => task.id === taskId) ?? null;
+}
+
+/** 削除されたカテゴリを参照しているタスクから、そのカテゴリを外す */
+export function clearCategory(
+  tasks: readonly Task[],
+  categoryId: string,
+): Task[] {
+  return tasks.map((task) =>
+    task.categoryId === categoryId ? { ...task, categoryId: null } : task,
+  );
+}
+
+/** そのカテゴリが付いているタスクの件数 */
+export function countTasksByCategory(
+  tasks: readonly Task[],
+  categoryId: string,
+): number {
+  return tasks.filter((task) => task.categoryId === categoryId).length;
 }

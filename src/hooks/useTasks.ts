@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import {
   addTask,
+  clearCategory,
   createTask,
   deleteTask,
   moveTask,
@@ -19,6 +20,8 @@ export type UseTasks = {
   deleteTask: (taskId: string) => void;
   archiveTask: (taskId: string) => void;
   unarchiveTask: (taskId: string) => void;
+  /** 削除されたカテゴリを全タスクから外す */
+  clearCategory: (categoryId: string) => void;
 };
 
 /** カンバン全体のタスク状態を保持するフック */
@@ -49,6 +52,10 @@ export function useTasks(initialTasks: readonly Task[] = []): UseTasks {
     setTasks((current) => setArchived(current, taskId, false));
   }, []);
 
+  const clearCategoryFromTasks = useCallback((categoryId: string) => {
+    setTasks((current) => clearCategory(current, categoryId));
+  }, []);
+
   return {
     tasks,
     addTask: add,
@@ -57,5 +64,6 @@ export function useTasks(initialTasks: readonly Task[] = []): UseTasks {
     deleteTask: remove,
     archiveTask: archive,
     unarchiveTask: unarchive,
+    clearCategory: clearCategoryFromTasks,
   };
 }

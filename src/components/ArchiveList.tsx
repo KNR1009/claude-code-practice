@@ -2,11 +2,14 @@
 
 import { CategoryBadge } from "./CategoryBadge";
 import { DueDateBadge } from "./DueDateBadge";
+import { findCategory } from "@/lib/category";
+import type { Category } from "@/types/category";
 import type { Task } from "@/types/task";
 import styles from "./ArchiveList.module.css";
 
 type Props = {
   tasks: readonly Task[];
+  categories: readonly Category[];
   today: string | null;
   onSelectTask: (taskId: string) => void;
   onUnarchive: (taskId: string) => void;
@@ -16,6 +19,7 @@ type Props = {
 /** アーカイブ済みタスクの一覧。復帰と削除を受け付ける */
 export function ArchiveList({
   tasks,
+  categories,
   today,
   onSelectTask,
   onUnarchive,
@@ -42,7 +46,9 @@ export function ArchiveList({
                 {task.title}
               </button>
               <div className={styles.meta}>
-                <CategoryBadge categoryId={task.categoryId} />
+                <CategoryBadge
+                  category={findCategory(categories, task.categoryId)}
+                />
                 {task.dueDate && (
                   <DueDateBadge dueDate={task.dueDate} today={today} />
                 )}

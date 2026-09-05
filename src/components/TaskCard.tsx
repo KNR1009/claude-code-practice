@@ -2,21 +2,21 @@
 
 import type { CSSProperties, DragEvent, KeyboardEvent } from "react";
 import { TASK_ID_MIME } from "@/lib/dnd";
-import { findCategory, type Task } from "@/types/task";
+import type { Category } from "@/types/category";
+import type { Task } from "@/types/task";
 import { CategoryBadge } from "./CategoryBadge";
 import { DueDateBadge } from "./DueDateBadge";
 import styles from "./TaskCard.module.css";
 
 type Props = {
   task: Task;
+  category: Category | null;
   today: string | null;
   onSelect: (taskId: string) => void;
 };
 
 /** 1 件のタスクを表示するカード。ドラッグ移動と詳細を開く操作を受け付ける */
-export function TaskCard({ task, today, onSelect }: Props) {
-  const category = findCategory(task.categoryId);
-
+export function TaskCard({ task, category, today, onSelect }: Props) {
   const handleDragStart = (event: DragEvent<HTMLElement>) => {
     event.dataTransfer.setData(TASK_ID_MIME, task.id);
     event.dataTransfer.effectAllowed = "move";
@@ -33,9 +33,9 @@ export function TaskCard({ task, today, onSelect }: Props) {
     <article
       className={styles.card}
       style={
-        task.categoryId === "none"
-          ? undefined
-          : ({ "--category-color": category.color } as CSSProperties)
+        category
+          ? ({ "--category-color": category.color } as CSSProperties)
+          : undefined
       }
       draggable
       role="button"
@@ -51,9 +51,9 @@ export function TaskCard({ task, today, onSelect }: Props) {
       {task.description && (
         <p className={styles.description}>{task.description}</p>
       )}
-      {(task.categoryId !== "none" || task.dueDate) && (
+      {(category || task.dueDate) && (
         <div className={styles.meta}>
-          <CategoryBadge categoryId={task.categoryId} />
+          <CategoryBadge category={category} />
           {task.dueDate && (
             <DueDateBadge dueDate={task.dueDate} today={today} />
           )}

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ArchiveList } from "@/components/ArchiveList";
-import { makeTask } from "@/test/factories";
+import { makeCategory, makeTask } from "@/test/factories";
 
 const tasks = [
   makeTask({ id: "1", archived: true, categoryId: "work", dueDate: "2026-09-30" }),
@@ -14,7 +14,14 @@ const renderList = (list = tasks) => {
     onUnarchive: vi.fn(),
     onDelete: vi.fn(),
   };
-  render(<ArchiveList tasks={list} today="2026-09-05" {...handlers} />);
+  render(
+    <ArchiveList
+      tasks={list}
+      categories={[makeCategory()]}
+      today="2026-09-05"
+      {...handlers}
+    />,
+  );
   return handlers;
 };
 

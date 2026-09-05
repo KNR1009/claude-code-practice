@@ -25,6 +25,11 @@ const openArchivePanel = async (user: ReturnType<typeof userEvent.setup>) => {
   return screen.getByTestId("archive-list");
 };
 
+const openCategoryPanel = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole("button", { name: /カテゴリ管理/ }));
+  return screen.getByTestId("category-manager");
+};
+
 beforeEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
@@ -186,5 +191,45 @@ describe("KanbanBoard", () => {
     expect(
       screen.getByRole("button", { name: "ライトモードに切り替え" }),
     ).toBeInTheDocument();
+  });
+
+  it("追加したカテゴリをタスクに設定できる", async () => {
+    const user = userEvent.setup();
+    render(<KanbanBoard />);
+
+    const panel = await openCategoryPanel(user);
+    await user.type(within(panel).getByLabelText("カテゴリ名"), "会議");
+    await user.click(within(panel).getByRole("radio", { name: "パープル" }));
+    await user.click(
+      within(panel).getByRole("button", { name: "カテゴリを追加" }),
+    );
+
+    expect(within(panel).getByText("会議")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("タイトル"), "定例の準備");
+    await user.selectOptions(screen.getByLabelText("カテゴリ"), "会議");
+    await user.click(screen.getByRole("button", { name: "追加" }));
+
+    const todo = screen.getByTestId("column-todo");
+    expect(within(todo).getByText("定例の準備")).toBeInTheDocument();
+    expect(within(todo).getByText("会議")).toBeInTheDocument();
+  });
+
+  it("カテゴリを削除すると、そのカテゴリのタスクから外れる", async () => {
+    const user = userEvent.setup();
+    render(
+      <KanbanBoard initialTasks={[makeTask({ id: "1", categoryId: "work" })]} />,
+    );
+
+    const todo = screen.getByTestId("column-todo");
+    expect(within(todo).getByText("仕事")).toBeInTheDocument();
+
+    const panel = await openCategoryPanel(user);
+    expect(within(panel).getByText("1件")).toBeInTheDocument();
+    await user.click(within(panel).getByRole("button", { name: "仕事 を削除" }));
+
+    expect(within(panel).queryByText("仕事")).not.toBeInTheDocument();
+    expect(within(todo).queryByText("仕事")).not.toBeInTheDocument();
+    expect(within(todo).getByText("設計する")).toBeInTheDocument();
   });
 });

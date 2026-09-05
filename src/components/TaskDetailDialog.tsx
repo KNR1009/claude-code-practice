@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { COLUMNS, type CategoryId, type Task, type TaskEdit, type TaskStatus } from "@/types/task";
+import type { Category } from "@/types/category";
+import { COLUMNS, type Task, type TaskEdit, type TaskStatus } from "@/types/task";
 import { CategorySelect } from "./CategorySelect";
 import styles from "./TaskDetailDialog.module.css";
 
 type Props = {
   task: Task;
+  categories: readonly Category[];
   onSave: (edit: TaskEdit) => void;
   onDelete: () => void;
   onArchive: () => void;
@@ -20,6 +22,7 @@ type Props = {
  */
 export function TaskDetailDialog({
   task,
+  categories,
   onSave,
   onDelete,
   onArchive,
@@ -30,7 +33,7 @@ export function TaskDetailDialog({
   const [description, setDescription] = useState(task.description);
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
-  const [categoryId, setCategoryId] = useState<CategoryId>(task.categoryId);
+  const [categoryId, setCategoryId] = useState<string | null>(task.categoryId);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
@@ -122,6 +125,7 @@ export function TaskDetailDialog({
               <span className={styles.labelText}>カテゴリ</span>
               <CategorySelect
                 className={styles.input}
+                categories={categories}
                 value={categoryId}
                 onChange={setCategoryId}
               />

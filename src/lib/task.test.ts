@@ -3,6 +3,8 @@ import {
   activeTasks,
   addTask,
   archivedTasks,
+  clearCategory,
+  countTasksByCategory,
   createTask,
   deleteTask,
   findTask,
@@ -41,7 +43,7 @@ describe("createTask", () => {
       description: "詳細",
       status: "todo",
       dueDate: null,
-      categoryId: "none",
+      categoryId: null,
       archived: false,
     });
   });
@@ -231,6 +233,33 @@ describe("tasksByStatus", () => {
   it("アーカイブ済みのタスクは含めない", () => {
     const tasks = [task("1"), task("2", { archived: true })];
     expect(tasksByStatus(tasks, "todo").map((t) => t.id)).toEqual(["1"]);
+  });
+});
+
+describe("clearCategory", () => {
+  it("そのカテゴリを参照しているタスクからだけカテゴリを外す", () => {
+    const tasks = [
+      task("1", { categoryId: "work" }),
+      task("2", { categoryId: "urgent" }),
+    ];
+    const cleared = clearCategory(tasks, "work");
+
+    expect(cleared[0].categoryId).toBeNull();
+    expect(cleared[1].categoryId).toBe("urgent");
+    expect(tasks[0].categoryId).toBe("work");
+  });
+});
+
+describe("countTasksByCategory", () => {
+  it("アーカイブ済みも含めて件数を数える", () => {
+    const tasks = [
+      task("1", { categoryId: "work" }),
+      task("2", { categoryId: "work", archived: true }),
+      task("3", { categoryId: null }),
+    ];
+
+    expect(countTasksByCategory(tasks, "work")).toBe(2);
+    expect(countTasksByCategory(tasks, "urgent")).toBe(0);
   });
 });
 

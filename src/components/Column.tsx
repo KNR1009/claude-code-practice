@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, type DragEvent } from "react";
+import { findCategory } from "@/lib/category";
 import { TASK_ID_MIME } from "@/lib/dnd";
+import type { Category } from "@/types/category";
 import type { Task, TaskStatus } from "@/types/task";
 import { TaskCard } from "./TaskCard";
 import styles from "./Column.module.css";
@@ -10,6 +12,7 @@ type Props = {
   status: TaskStatus;
   label: string;
   tasks: readonly Task[];
+  categories: readonly Category[];
   today: string | null;
   onDropTask: (taskId: string, status: TaskStatus) => void;
   onSelectTask: (taskId: string) => void;
@@ -20,6 +23,7 @@ export function Column({
   status,
   label,
   tasks,
+  categories,
   today,
   onDropTask,
   onSelectTask,
@@ -60,6 +64,7 @@ export function Column({
           <TaskCard
             key={task.id}
             task={task}
+            category={findCategory(categories, task.categoryId)}
             today={today}
             onSelect={onSelectTask}
           />

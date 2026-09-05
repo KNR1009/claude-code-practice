@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Column } from "@/components/Column";
 import { createDataTransfer } from "@/test/dataTransfer";
-import { makeTask } from "@/test/factories";
+import { makeCategory, makeTask } from "@/test/factories";
 import type { TaskStatus } from "@/types/task";
 
 const tasks = [
@@ -19,6 +19,7 @@ const renderColumn = () => {
       status="todo"
       label="未着手"
       tasks={tasks}
+      categories={[makeCategory()]}
       today="2026-09-05"
       onDropTask={onDropTask}
       onSelectTask={onSelectTask}
@@ -43,6 +44,7 @@ describe("Column", () => {
         status="done"
         label="完了"
         tasks={[]}
+        categories={[]}
         today={null}
         onDropTask={vi.fn()}
         onSelectTask={vi.fn()}
