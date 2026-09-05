@@ -7,6 +7,8 @@ Claude Code を試すための練習用リポジトリ。
 
 ## 1. 動かす
 
+公開 URL: **https://claude-code-practice-knr-project.vercel.app**
+
 前提: Node.js 20 以降（開発時は v24.4.1）。
 
 ```bash
@@ -214,12 +216,50 @@ const task = makeTask({ id: "2", status: "done", dueDate: "2026-10-01" });
 4. `hooks/useTasks.ts` … 新しい操作が要るなら追加する（多くの場合は不要）
 5. `components/` … 入力欄（`TaskForm` / `TaskDetailDialog`）と表示（`TaskCard`）を足す
 6. `npm test && npm run typecheck` で確認する
+7. ブランチを push して PR を作り、プレビュー URL で動きを見る。main にマージすると本番へ自動反映される（→ [9. デプロイ](#9-デプロイ)）
 
 **先に `lib/` とそのテストを書いてから UI に降ろす**のが、この構成での基本の進め方。
 
 ---
 
-## 9. Claude Code の練習リポジトリとしてのメモ
+## 9. デプロイ
+
+Vercel にホストしている。GitHub 連携済みで、**手動のデプロイ操作は不要**。
+
+| 操作 | 起きること |
+| --- | --- |
+| `main` にマージ / push | 本番へ自動デプロイ → https://claude-code-practice-knr-project.vercel.app |
+| feature ブランチを push / PR 作成 | プレビュー環境が自動生成され、PR に URL がコメントされる |
+
+- プロジェクト: [knr-project/claude-code-practice](https://vercel.com/knr-project/claude-code-practice)
+- Framework Preset: Next.js / Node.js 24.x / リージョン iad1
+- ビルドコマンドは `npm run build`（`next build` が型チェックも実行する）
+
+### 注意点
+
+**main へのマージ＝即公開。** ステージング環境は無い。確認は PR のプレビュー URL で行う。
+
+**ビルドが通らないとデプロイは失敗し、直前の本番がそのまま残る。** 壊れたものが公開されることはないが、マージしたのに反映されない場合はまずデプロイのログを見る。push 前に手元で `npm run build` を通しておくのが確実。
+
+**テストは自動実行されない。** CI（GitHub Actions）は未設定で、Vercel のビルドも `npm test` を走らせない。マージ前に手元で `npm test` を実行すること。
+
+**データは保存されない。** タスクとカテゴリはメモリ上にしか無いため、本番でもリロードで初期状態に戻る。動作確認用のデモとして公開している状態。
+
+**URL は認証なしで誰でも開ける。** Deployment Protection は設定していない。見せたくないものは置かない。
+
+**`.vercel/` はコミットしない。** ローカルのプロジェクトリンク情報で、`.gitignore` 済み。
+
+### 困ったときは
+
+| やりたいこと | 方法 |
+| --- | --- |
+| 前のバージョンに戻す | 管理画面の Deployments から戻したいものを Promote to Production（`npx vercel rollback --scope knr-project` でも可） |
+| デプロイのログを見る | 管理画面の該当デプロイ → Building / Deployment Summary |
+| 手動でデプロイする | `npx vercel --prod --scope knr-project`（通常は不要） |
+
+---
+
+## 10. Claude Code の練習リポジトリとしてのメモ
 
 | やりたいこと | 方法 |
 | --- | --- |
@@ -239,3 +279,4 @@ const task = makeTask({ id: "2", status: "done", dueDate: "2026-10-01" });
 | 2026-09-05 | カンバンアプリの実装（Next.js + TypeScript + Vitest） | 3列のボード / 追加 / DnD 移動 |
 | 2026-09-05 | 詳細・編集・削除・アーカイブ・締切日・カテゴリ・ダークモードを追加 | 完了 |
 | 2026-09-05 | カテゴリをユーザー管理化（追加・削除、10色パレット） | 完了 |
+| 2026-09-05 | Vercel へデプロイ・GitHub 連携（main push で本番、PR でプレビュー） | 完了 |
